@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing Performance vs. Revenue Growth — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0A0F1C;
+    --bg-panel:#11192B;
+    --bg-panel-raised:#16203A;
+    --border:#232F4A;
+    --text-primary:#EAF0F6;
+    --text-muted:#8CA0BE;
+    --text-faint:#5B6C8C;
+    --accent-growth:#3DDC97;
+    --accent-growth-dim: rgba(61,220,151,0.14);
+    --accent-opportunity:#FFB454;
+    --accent-opportunity-dim: rgba(255,180,84,0.12);
+    --accent-alert:#FF6B6B;
+    --accent-alert-dim: rgba(255,107,107,0.12);
+    --accent-info:#6FA8FF;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg-deep);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    padding:32px 40px 80px;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:16px;
+    margin-bottom:28px; padding-bottom:24px;
+    border-bottom:1px solid var(--border);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em;
+    color:var(--accent-growth); text-transform:uppercase; margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{
+    content:''; width:6px; height:6px; border-radius:50%; background:var(--accent-growth);
+    box-shadow:0 0 8px var(--accent-growth); display:inline-block;
+  }
+  h1{font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.01em;}
+  .subtitle{color:var(--text-muted); font-size:14px; margin-top:6px; max-width:640px;}
+  .meta{text-align:right; color:var(--text-faint); font-size:12px; font-family:'IBM Plex Mono',monospace;}
+  .meta div{margin-bottom:4px;}
+
+  /* ---------- KPI Strip ---------- */
+  .kpi-strip{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:24px;
+  }
+  .kpi-card{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px; position:relative; overflow:hidden;
+  }
+  .kpi-label{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:600;}
+  .kpi-delta{font-size:12px; margin-top:8px; font-family:'IBM Plex Mono',monospace; display:inline-flex; align-items:center; gap:4px;}
+  .up{color:var(--accent-growth);}
+  .down{color:var(--accent-alert);}
+
+  /* ---------- Grid Layout ---------- */
+  .grid-main{
+    display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px;
+  }
+  .panel{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:22px;
+  }
+  .panel-head{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;
+  }
+  .panel-title{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600;}
+  .panel-sub{font-size:12px; color:var(--text-faint); margin-top:2px;}
+
+  .toggle-group{display:flex; gap:6px; background:var(--bg-panel-raised); padding:4px; border-radius:8px; border:1px solid var(--border);}
+  .toggle-btn{
+    background:transparent; border:none; color:var(--text-muted); font-size:12px; padding:6px 12px;
+    border-radius:6px; cursor:pointer; font-family:'IBM Plex Mono',monospace; transition:all .15s ease;
+  }
+  .toggle-btn.active{background:var(--accent-growth); color:#08120D; font-weight:600;}
+
+  canvas{max-height:280px;}
+
+  /* ---------- Donut legend ---------- */
+  .legend-list{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+  .legend-row{display:flex; justify-content:space-between; align-items:center; font-size:13px;}
+  .legend-key{display:flex; align-items:center; gap:8px; color:var(--text-muted);}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+  .legend-val{font-family:'IBM Plex Mono',monospace; color:var(--text-primary);}
+
+  /* ---------- Bottom grid ---------- */
+  .grid-bottom{display:grid; grid-template-columns:1.3fr 1fr; gap:16px;}
+
+  /* ---------- Opportunity Radar (signature element) ---------- */
+  .opp-panel{
+    border:1px solid rgba(255,180,84,0.35);
+    background:linear-gradient(180deg, rgba(255,180,84,0.06), var(--bg-panel) 60%);
+  }
+  .opp-badge{
+    display:inline-flex; align-items:center; gap:6px; background:var(--accent-opportunity-dim);
+    color:var(--accent-opportunity); font-family:'IBM Plex Mono',monospace; font-size:11px;
+    padding:4px 10px; border-radius:20px; border:1px solid rgba(255,180,84,0.35);
+  }
+  .opp-cards{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+  .opp-card{
+    display:grid; grid-template-columns:1fr auto auto; gap:14px; align-items:center;
+    background:var(--bg-panel-raised); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; transition:border-color .15s ease;
+  }
+  .opp-card:hover{border-color:var(--accent-opportunity);}
+  .opp-url{font-size:13px; font-weight:500;}
+  .opp-sub{font-size:11px; color:var(--text-faint); margin-top:3px; font-family:'IBM Plex Mono',monospace;}
+  .opp-pos{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent-opportunity);
+    background:var(--accent-opportunity-dim); padding:4px 10px; border-radius:6px; white-space:nowrap;
+  }
+  .opp-rev{font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; white-space:nowrap;}
+  .opp-footer{
+    margin-top:16px; padding-top:14px; border-top:1px dashed var(--border);
+    font-size:12px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;
+  }
+  .opp-total{color:var(--accent-opportunity); font-family:'IBM Plex Mono',monospace; font-weight:600;}
+
+  /* ---------- Table ---------- */
+  .chip-row{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .chip{
+    background:var(--bg-panel-raised); border:1px solid var(--border); color:var(--text-muted);
+    font-size:12px; padding:6px 14px; border-radius:20px; cursor:pointer; transition:all .15s ease;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .chip.active{background:var(--accent-growth); color:#08120D; border-color:var(--accent-growth); font-weight:600;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; color:var(--text-faint); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    padding:0 10px 10px; border-bottom:1px solid var(--border); cursor:pointer; user-select:none;
+  }
+  thead th:hover{color:var(--text-muted);}
+  tbody td{padding:11px 10px; border-bottom:1px solid rgba(35,47,74,0.5);}
+  tbody tr:hover{background:var(--bg-panel-raised);}
+  .url-cell{font-weight:500;}
+  .intent-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 8px; border-radius:5px;
+  }
+  .intent-Commercial{background:rgba(111,168,255,0.14); color:var(--accent-info);}
+  .intent-Informational{background:rgba(140,160,190,0.14); color:var(--text-muted);}
+  .intent-Transactional{background:var(--accent-growth-dim); color:var(--accent-growth);}
+  .num-cell{font-family:'IBM Plex Mono',monospace; text-align:right;}
+  .flag-warn{color:var(--accent-alert);}
+  .flag-good{color:var(--accent-growth);}
+
+  footer{
+    margin-top:28px; text-align:center; color:var(--text-faint); font-size:11px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  @media (max-width:980px){
+    .kpi-strip{grid-template-columns:repeat(2,1fr);}
+    .grid-main, .grid-bottom{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">Live Simulated Data · Aug 2024 – Jul 2025</div>
+    <h1>Marketing Performance vs. Revenue Growth</h1>
+    <div class="subtitle">Blended SEO, organic search, and CRM revenue data across 12 landing pages — connecting search visibility directly to business outcomes.</div>
+  </div>
+  <div class="meta">
+    <div>SOURCES: SEMrush · Search Console · CRM</div>
+    <div>ROWS PROCESSED: 4,380</div>
+    <div>REFRESH: Daily (simulated)</div>
+  </div>
+</header>
+
+<section class="kpi-strip">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-value" id="kpi-revenue">$0</div>
+    <div class="kpi-delta up" id="kpi-mom">▲ 0% MoM</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Organic Clicks</div>
+    <div class="kpi-value" id="kpi-clicks">0</div>
+    <div class="kpi-delta" style="color:var(--text-faint)">across 12 pages</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Completed Orders</div>
+    <div class="kpi-value" id="kpi-orders">0</div>
+    <div class="kpi-delta" style="color:var(--text-faint)">attributed via CRM</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Conversion Rate</div>
+    <div class="kpi-value" id="kpi-conv">0%</div>
+    <div class="kpi-delta" style="color:var(--text-faint)">clicks → orders</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Revenue Per Click</div>
+    <div class="kpi-value" id="kpi-rpc">$0</div>
+    <div class="kpi-delta" style="color:var(--text-faint)">blended RPC</div>
+  </div>
+</section>
+
+<section class="grid-main">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Revenue Trend</div>
+        <div class="panel-sub">Monthly, Aug 2024 – Jul 2025</div>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-metric="Revenue">Revenue</button>
+        <button class="toggle-btn" data-metric="Clicks">Clicks</button>
+        <button class="toggle-btn" data-metric="Orders">Orders</button>
+      </div>
+    </div>
+    <canvas id="trendChart"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Revenue by Intent</div>
+        <div class="panel-sub">Where the money comes from</div>
+      </div>
+    </div>
+    <canvas id="intentChart" style="max-height:190px;"></canvas>
+    <div class="legend-list" id="intentLegend"></div>
+  </div>
+</section>
+
+<section class="grid-bottom">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Top Pages by Revenue</div>
+        <div class="panel-sub">All 12 tracked landing pages</div>
+      </div>
+    </div>
+    <canvas id="pagesChart" style="max-height:320px;"></canvas>
+  </div>
+
+  <div class="panel opp-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Page 2 Opportunity Radar</div>
+        <div class="panel-sub">Positions 11–20 · fastest ROI on existing content</div>
+      </div>
+      <span class="opp-badge">⚡ 3 flagged</span>
+    </div>
+    <div class="opp-cards" id="oppCards"></div>
+    <div class="opp-footer">
+      <span>Revenue already earned at page-2 rankings</span>
+      <span class="opp-total" id="oppTotal">$0</span>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="margin-top:16px;">
+  <div class="panel-head">
+    <div>
+      <div class="panel-title">Page-Level Performance</div>
+      <div class="panel-sub">Click a column to sort · filter by intent below</div>
+    </div>
+  </div>
+  <div class="chip-row" id="intentChips">
+    <button class="chip active" data-intent="all">All Pages</button>
+    <button class="chip" data-intent="Commercial">Commercial</button>
+    <button class="chip" data-intent="Informational">Informational</button>
+    <button class="chip" data-intent="Transactional">Transactional</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th data-key="URL">Page</th>
+        <th data-key="Intent">Intent</th>
+        <th data-key="BestPos" style="text-align:right">Best Position</th>
+        <th data-key="Clicks" style="text-align:right">Clicks</th>
+        <th data-key="ConvRate" style="text-align:right">Conv. Rate</th>
+        <th data-key="RPC" style="text-align:right">RPC</th>
+        <th data-key="Revenue" style="text-align:right">Revenue</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</section>
+
+<footer>MARKETING-REVENUE-ANALYTICS · sample dashboard built on synthetic data · replicate this view in Power BI using the same dataset + DAX measures</footer>
+
+<script>
+const DATA = {"monthly": [{"YearMonth": "2024-08", "Revenue": 10418.29, "Clicks": 2875, "Orders": 89}, {"YearMonth": "2024-09", "Revenue": 8979.41, "Clicks": 2801, "Orders": 82}, {"YearMonth": "2024-10", "Revenue": 11248.33, "Clicks": 3053, "Orders": 94}, {"YearMonth": "2024-11", "Revenue": 12782.51, "Clicks": 3342, "Orders": 97}, {"YearMonth": "2024-12", "Revenue": 17429.01, "Clicks": 3746, "Orders": 130}, {"YearMonth": "2025-01", "Revenue": 17942.18, "Clicks": 4387, "Orders": 139}, {"YearMonth": "2025-02", "Revenue": 17264.99, "Clicks": 4385, "Orders": 136}, {"YearMonth": "2025-03", "Revenue": 18169.1, "Clicks": 5298, "Orders": 146}, {"YearMonth": "2025-04", "Revenue": 17125.74, "Clicks": 5484, "Orders": 143}, {"YearMonth": "2025-05", "Revenue": 17843.13, "Clicks": 5490, "Orders": 149}, {"YearMonth": "2025-06", "Revenue": 15870.33, "Clicks": 5282, "Orders": 131}, {"YearMonth": "2025-07", "Revenue": 16966.61, "Clicks": 4984, "Orders": 136}], "by_url": [{"URL": "fitcommerce.com/blog/protein-powder-buying-guide", "Revenue": 38165.47, "Clicks": 5590, "Orders": 242, "BestPos": 9.0, "Vol": 4337.0, "Intent": "Commercial", "ConvRate": 4.33, "RPC": 6.83}, {"URL": "fitcommerce.com/blog/home-gym-setup-guide", "Revenue": 27065.31, "Clicks": 6911, "Orders": 284, "BestPos": 8.0, "Vol": 6576.0, "Intent": "Informational", "ConvRate": 4.11, "RPC": 3.92}, {"URL": "fitcommerce.com/products/smart-fitness-watch", "Revenue": 25819.69, "Clicks": 3487, "Orders": 158, "BestPos": 5.0, "Vol": 3526.0, "Intent": "Transactional", "ConvRate": 4.53, "RPC": 7.4}, {"URL": "fitcommerce.com/blog/best-running-shoes-2025", "Revenue": 24603.62, "Clicks": 7566, "Orders": 142, "BestPos": 12.0, "Vol": 7184.0, "Intent": "Commercial", "ConvRate": 1.88, "RPC": 3.25}, {"URL": "fitcommerce.com/blog/beginner-strength-training-plan", "Revenue": 18843.5, "Clicks": 6401, "Orders": 139, "BestPos": 3.0, "Vol": 6906.0, "Intent": "Informational", "ConvRate": 2.17, "RPC": 2.94}, {"URL": "fitcommerce.com/blog/best-yoga-mats-review", "Revenue": 11500.84, "Clicks": 2499, "Orders": 85, "BestPos": 11.0, "Vol": 1400.0, "Intent": "Commercial", "ConvRate": 3.4, "RPC": 4.6}, {"URL": "fitcommerce.com/blog/pre-workout-supplements-explained", "Revenue": 11229.07, "Clicks": 3151, "Orders": 59, "BestPos": 8.0, "Vol": 3815.0, "Intent": "Commercial", "ConvRate": 1.87, "RPC": 3.56}, {"URL": "fitcommerce.com/products/resistance-bands-set", "Revenue": 9246.65, "Clicks": 1802, "Orders": 50, "BestPos": 7.0, "Vol": 1754.0, "Intent": "Transactional", "ConvRate": 2.77, "RPC": 5.13}, {"URL": "fitcommerce.com/blog/how-to-train-for-a-marathon", "Revenue": 5487.53, "Clicks": 4984, "Orders": 114, "BestPos": 10.0, "Vol": 3275.0, "Intent": "Informational", "ConvRate": 2.29, "RPC": 1.1}, {"URL": "fitcommerce.com/products/adjustable-dumbbells", "Revenue": 4268.61, "Clicks": 4680, "Orders": 78, "BestPos": 10.0, "Vol": 4284.0, "Intent": "Transactional", "ConvRate": 1.67, "RPC": 0.91}, {"URL": "fitcommerce.com/products/trail-running-shoes", "Revenue": 3375.33, "Clicks": 2780, "Orders": 91, "BestPos": 1.0, "Vol": 1902.0, "Intent": "Transactional", "ConvRate": 3.27, "RPC": 1.21}, {"URL": "fitcommerce.com/products/recovery-foam-roller", "Revenue": 2434.01, "Clicks": 1276, "Orders": 30, "BestPos": 11.0, "Vol": 1243.0, "Intent": "Transactional", "ConvRate": 2.35, "RPC": 1.91}], "opportunity": [{"URL": "fitcommerce.com/blog/best-running-shoes-2025", "Revenue": 24603.62, "Clicks": 7566, "Orders": 142, "BestPos": 12.0, "Vol": 7184.0, "Intent": "Commercial", "ConvRate": 1.88, "RPC": 3.25}, {"URL": "fitcommerce.com/blog/best-yoga-mats-review", "Revenue": 11500.84, "Clicks": 2499, "Orders": 85, "BestPos": 11.0, "Vol": 1400.0, "Intent": "Commercial", "ConvRate": 3.4, "RPC": 4.6}, {"URL": "fitcommerce.com/products/recovery-foam-roller", "Revenue": 2434.01, "Clicks": 1276, "Orders": 30, "BestPos": 11.0, "Vol": 1243.0, "Intent": "Transactional", "ConvRate": 2.35, "RPC": 1.91}], "kpis": {"total_revenue": 182039.63, "total_clicks": 51127, "total_orders": 1472, "overall_conv": 2.88, "overall_rpc": 3.56, "latest_mom": 6.91}, "intent_rev": [{"Primary_Search_Intent": "Commercial", "Revenue": 85499.0}, {"Primary_Search_Intent": "Informational", "Revenue": 51396.34}, {"Primary_Search_Intent": "Transactional", "Revenue": 45144.29}]};
+
+const fmtMoney = n => '$' + Math.round(n).toLocaleString('en-US');
+const fmtMoneyDec = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtNum = n => Math.round(n).toLocaleString('en-US');
+
+// ---------- KPI strip ----------
+document.getElementById('kpi-revenue').textContent = fmtMoney(DATA.kpis.total_revenue);
+document.getElementById('kpi-clicks').textContent = fmtNum(DATA.kpis.total_clicks);
+document.getElementById('kpi-orders').textContent = fmtNum(DATA.kpis.total_orders);
+document.getElementById('kpi-conv').textContent = DATA.kpis.overall_conv + '%';
+document.getElementById('kpi-rpc').textContent = '$' + DATA.kpis.overall_rpc.toFixed(2);
+const momEl = document.getElementById('kpi-mom');
+momEl.textContent = (DATA.kpis.latest_mom >= 0 ? '▲ ' : '▼ ') + Math.abs(DATA.kpis.latest_mom) + '% MoM';
+momEl.className = 'kpi-delta ' + (DATA.kpis.latest_mom >= 0 ? 'up' : 'down');
+
+// ---------- Chart defaults ----------
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#8CA0BE';
+const gridColor = 'rgba(35,47,74,0.6)';
+
+// ---------- Trend chart ----------
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+const monthLabels = DATA.monthly.map(m => {
+  const [y,mo] = m.YearMonth.split('-');
+  return new Date(y, mo-1).toLocaleString('en-US',{month:'short', year:'2-digit'});
+});
+let currentMetric = 'Revenue';
+const gradient = trendCtx.createLinearGradient(0,0,0,280);
+gradient.addColorStop(0, 'rgba(61,220,151,0.28)');
+gradient.addColorStop(1, 'rgba(61,220,151,0.0)');
+
+const trendChart = new Chart(trendCtx, {
+  type:'line',
+  data:{
+    labels:monthLabels,
+    datasets:[{
+      label:'Revenue',
+      data:DATA.monthly.map(m=>m.Revenue),
+      borderColor:'#3DDC97',
+      backgroundColor:gradient,
+      fill:true,
+      tension:0.35,
+      pointRadius:3,
+      pointBackgroundColor:'#3DDC97',
+      pointBorderColor:'#0A0F1C',
+      pointBorderWidth:2,
+      borderWidth:2.5
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#16203A', borderColor:'#232F4A', borderWidth:1,
+        titleColor:'#EAF0F6', bodyColor:'#8CA0BE', padding:10, cornerRadius:6,
+        callbacks:{
+          label: ctx => currentMetric === 'Revenue' ? fmtMoney(ctx.parsed.y) : fmtNum(ctx.parsed.y)
+        }
+      }
+    },
+    scales:{
+      x:{grid:{display:false}, ticks:{color:'#5B6C8C', font:{size:11}}},
+      y:{grid:{color:gridColor}, ticks:{color:'#5B6C8C', font:{size:11}, callback:v=> currentMetric==='Revenue' ? '$'+(v/1000)+'k' : v}}
+    }
+  }
+});
+
+document.querySelectorAll('.toggle-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMetric = btn.dataset.metric;
+    const colors = {Revenue:'#3DDC97', Clicks:'#6FA8FF', Orders:'#FFB454'};
+    trendChart.data.datasets[0].data = DATA.monthly.map(m=>m[currentMetric]);
+    trendChart.data.datasets[0].label = currentMetric;
+    trendChart.data.datasets[0].borderColor = colors[currentMetric];
+    trendChart.data.datasets[0].pointBackgroundColor = colors[currentMetric];
+    trendChart.update();
+  });
+});
+
+// ---------- Intent donut ----------
+const intentColors = {Commercial:'#6FA8FF', Informational:'#8CA0BE', Transactional:'#3DDC97'};
+new Chart(document.getElementById('intentChart'), {
+  type:'doughnut',
+  data:{
+    labels:DATA.intent_rev.map(d=>d.Primary_Search_Intent),
+    datasets:[{
+      data:DATA.intent_rev.map(d=>d.Revenue),
+      backgroundColor:DATA.intent_rev.map(d=>intentColors[d.Primary_Search_Intent]),
+      borderColor:'#11192B', borderWidth:3, hoverOffset:6
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'68%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#16203A', borderColor:'#232F4A', borderWidth:1,
+        titleColor:'#EAF0F6', bodyColor:'#8CA0BE', padding:10, cornerRadius:6,
+        callbacks:{label: ctx => ctx.label + ': ' + fmtMoney(ctx.parsed)}
+      }
+    }
+  }
+});
+const legendEl = document.getElementById('intentLegend');
+const totalIntentRev = DATA.intent_rev.reduce((a,d)=>a+d.Revenue,0);
+DATA.intent_rev.forEach(d=>{
+  const pct = ((d.Revenue/totalIntentRev)*100).toFixed(0);
+  legendEl.innerHTML += `<div class="legend-row">
+    <span class="legend-key"><span class="dot" style="background:${intentColors[d.Primary_Search_Intent]}"></span>${d.Primary_Search_Intent}</span>
+    <span class="legend-val">${fmtMoney(d.Revenue)} · ${pct}%</span>
+  </div>`;
+});
+
+// ---------- Top pages bar chart ----------
+const sortedByRev = [...DATA.by_url].sort((a,b)=>b.Revenue-a.Revenue);
+new Chart(document.getElementById('pagesChart'), {
+  type:'bar',
+  data:{
+    labels:sortedByRev.map(d=>d.URL.replace('fitcommerce.com','')),
+    datasets:[{
+      data:sortedByRev.map(d=>d.Revenue),
+      backgroundColor:sortedByRev.map(d=> d.BestPos>=11 && d.BestPos<=20 ? '#FFB454' : '#3DDC97'),
+      borderRadius:4, barThickness:14
+    }]
+  },
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#16203A', borderColor:'#232F4A', borderWidth:1,
+        titleColor:'#EAF0F6', bodyColor:'#8CA0BE', padding:10, cornerRadius:6,
+        callbacks:{label: ctx => fmtMoney(ctx.parsed.x)}
+      }
+    },
+    scales:{
+      x:{grid:{color:gridColor}, ticks:{color:'#5B6C8C', font:{size:10}, callback:v=>'$'+(v/1000)+'k'}},
+      y:{grid:{display:false}, ticks:{color:'#8CA0BE', font:{size:10.5}}}
+    }
+  }
+});
+
+// ---------- Opportunity cards ----------
+const oppCardsEl = document.getElementById('oppCards');
+let oppTotal = 0;
+DATA.opportunity.forEach(d=>{
+  oppTotal += d.Revenue;
+  oppCardsEl.innerHTML += `<div class="opp-card">
+    <div>
+      <div class="opp-url">${d.URL.replace('fitcommerce.com','')}</div>
+      <div class="opp-sub">Vol: ${fmtNum(d.Vol)}/mo · Conv: ${d.ConvRate}%</div>
+    </div>
+    <span class="opp-pos">Pos ${d.BestPos}</span>
+    <span class="opp-rev">${fmtMoney(d.Revenue)}</span>
+  </div>`;
+});
+document.getElementById('oppTotal').textContent = fmtMoney(oppTotal);
+
+// ---------- Table ----------
+let currentFilter = 'all';
+let sortKey = 'Revenue';
+let sortDir = -1;
+const avgConv = DATA.kpis.overall_conv;
+
+function renderTable(){
+  let rows = [...DATA.by_url];
+  if(currentFilter !== 'all') rows = rows.filter(r=>r.Intent===currentFilter);
+  rows.sort((a,b)=>{
+    if(typeof a[sortKey] === 'string') return sortDir * a[sortKey].localeCompare(b[sortKey]);
+    return sortDir * (a[sortKey]-b[sortKey]);
+  });
+  const body = document.getElementById('tableBody');
+  body.innerHTML = rows.map(r=>{
+    const convFlag = r.ConvRate < avgConv ? 'flag-warn' : 'flag-good';
+    const posFlag = (r.BestPos>=11 && r.BestPos<=20) ? ' ⚡' : '';
+    return `<tr>
+      <td class="url-cell">${r.URL.replace('fitcommerce.com','')}${posFlag}</td>
+      <td><span class="intent-tag intent-${r.Intent}">${r.Intent}</span></td>
+      <td class="num-cell">${r.BestPos}</td>
+      <td class="num-cell">${fmtNum(r.Clicks)}</td>
+      <td class="num-cell ${convFlag}">${r.ConvRate}%</td>
+      <td class="num-cell">$${r.RPC.toFixed(2)}</td>
+      <td class="num-cell">${fmtMoney(r.Revenue)}</td>
+    </tr>`;
+  }).join('');
+}
+renderTable();
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.intent;
+    renderTable();
+  });
+});
+
+document.querySelectorAll('thead th').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if(sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+    renderTable();
+  });
+});
+</script>
+</body>
+</html>
