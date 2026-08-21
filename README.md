@@ -114,67 +114,7 @@ marketing-revenue-analytics/
 └── README.md
 ```
 
----
 
-## How to Run This Project
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/<your-username>/marketing-revenue-analytics.git
-cd marketing-revenue-analytics
 
-# 2. Install dependencies
-pip install pandas numpy openpyxl
 
-# 3. Run the ETL pipeline
-python scripts/etl_pipeline.py
-
-# Output: data/processed/processed_marketing_analytics.csv
-# 4. Load this CSV into Power BI and apply the measures in powerbi/dax_measures.md
-```
-
----
-
-## Resume Bullet Points
-
-Use these as a starting template — adapt the metrics to your actual dashboard
-once you've built it out, and be ready to explain every number in an interview:
-
-- Built an end-to-end marketing analytics pipeline in **Python (Pandas,
-  NumPy)** that cleaned and merged 3 disparate data sources (SEO rank
-  tracking, Google Search Console, CRM revenue) via URL normalization,
-  processing 4,000+ records into a single analytics-ready dataset.
-- Designed and calculated custom KPIs — **Revenue Per Click, Conversion
-  Rate %, and Month-over-Month Revenue Growth** — to connect organic
-  search performance directly to business revenue outcomes.
-- Developed a **Power BI dashboard** with custom **DAX measures**
-  (time-intelligence functions including `DATEADD` and
-  `SAMEPERIODLASTYEAR`) to track YoY/MoM growth and surface a
-  **"Page 2 SEO Opportunity" flag**, identifying quick-win keyword
-  targets worth an estimated **$38K+ in existing attributed revenue**.
-- Delivered executive-level insights identifying revenue concentration
-  and traffic/conversion mismatches across landing pages, translating
-  raw data into **actionable content and SEO prioritization
-  recommendations**.
-- Applied a **business-first analytics approach** — framing every metric
-  around the question "so what should the business do differently,"
-  rather than reporting traffic numbers in isolation.
-
-### How to Frame This in an Interview
-
-If asked *"walk me through a project you're proud of,"* structure your
-answer as: **problem → data → process → insight → recommendation**:
-
-> "Marketing and revenue data usually live in separate tools, so teams
-> optimize for traffic without knowing if it converts. I built a Python
-> pipeline that joins SEO, search console, and CRM data on a normalized
-> URL key, calculated conversion and revenue-per-click metrics, and
-> visualized it in Power BI. That surfaced that our highest-traffic page
-> actually had below-average conversion, while three page-2-ranking
-> articles were sitting on real revenue potential — a $38K quick-win
-> opportunity we wouldn't have seen by looking at rankings or revenue
-> data alone."
-
-This demonstrates the full analyst skill set — **technical execution
-(Python/DAX) plus business judgment** — which is what separates a
-data analyst from someone who can just write queries.
